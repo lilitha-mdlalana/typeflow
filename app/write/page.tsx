@@ -5,7 +5,7 @@ import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import { WritingToolbar } from "@/components/writing-toolbar";
 import { FormattingToolbar } from "@/components/formatting-toolbar";
-import { TypewriterAnimation } from "@/components/typewriter-animation";
+import { VirtualKeyboard } from "@/components/virtual-keyboard";
 import { SoundSelector, SOUND_OPTIONS } from "@/components/sound-selector";
 
 export default function TypeflowPage() {
@@ -90,6 +90,24 @@ export default function TypeflowPage() {
     }
   }, [isLoaded]);
 
+  const playTypeSound = () => {
+    if (keypressAudioRef.current) {
+      keypressAudioRef.current.currentTime = 0;
+      keypressAudioRef.current.play().catch(() => {
+        // Ignore errors if audio can't play
+      });
+    }
+  };
+
+  const playReturnSound = () => {
+    if (returnAudioRef.current) {
+      returnAudioRef.current.currentTime = 0;
+      returnAudioRef.current.play().catch(() => {
+        // Ignore errors if audio can't play
+      });
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Don't play sound for modifier keys
     if (
@@ -106,22 +124,30 @@ export default function TypeflowPage() {
 
     // Play return sound when Enter is pressed
     if (e.key === "Enter") {
-      if (returnAudioRef.current) {
-        returnAudioRef.current.currentTime = 0;
-        returnAudioRef.current.play().catch(() => {
-          // Ignore errors if audio can't play
-        });
-      }
+      playReturnSound();
       return;
     }
 
     // Play selected keypress sound for regular typing (if not silent)
-    if (keypressAudioRef.current) {
-      keypressAudioRef.current.currentTime = 0;
-      keypressAudioRef.current.play().catch(() => {
-        // Ignore errors if audio can't play
-      });
-    }
+    playTypeSound();
+  };
+
+  const handleVirtualType = (char: string) => {
+    editorRef.current?.focus();
+    document.execCommand("insertText", false, char);
+    playTypeSound();
+  };
+
+  const handleVirtualBackspace = () => {
+    editorRef.current?.focus();
+    document.execCommand("delete");
+    playTypeSound();
+  };
+
+  const handleVirtualEnter = () => {
+    editorRef.current?.focus();
+    document.execCommand("insertParagraph");
+    playReturnSound();
   };
 
   const handleInput = () => {
@@ -180,7 +206,7 @@ export default function TypeflowPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative">
+    <div className="min-h-screen flex items-center justify-center p-4 pb-44 md:pb-36 relative">
       <div
         className={`w-full max-w-3xl transition-opacity duration-1000 ease-out ${
           isVisible ? "opacity-100" : "opacity-0"
@@ -213,11 +239,15 @@ export default function TypeflowPage() {
         onDownload={handleDownload}
       />
 
-      <TypewriterAnimation />
+      <VirtualKeyboard
+        onType={handleVirtualType}
+        onBackspace={handleVirtualBackspace}
+        onEnter={handleVirtualEnter}
+      />
 
       {/* Subtle word count at bottom */}
       <div
-        className={`fixed bottom-8 right-8 text-sm text-muted-foreground/60 transition-opacity duration-500 ${
+        className={`fixed bottom-44 md:bottom-36 right-8 text-sm text-muted-foreground/60 transition-opacity duration-500 ${
           wordCount > 0 ? "opacity-100" : "opacity-0"
         }`}
       >
